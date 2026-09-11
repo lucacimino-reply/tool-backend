@@ -61,11 +61,13 @@ async function createHistoryTable(client: PoolClient): Promise<void> {
   `);
 }
 
-export async function applyMigrations(pool: Pool): Promise<void> {
+export async function applyMigrations(pool: Pool, timeoutMs: number): Promise<void> {
   const migrations = await loadMigrations();
   const client = await pool.connect();
 
   try {
+    // A competing instance must not wait beyond the configured startup window.
+    await client.query("SELECT set_config('lock_timeout', $1, false)", [`${timeoutMs}ms`]);
     await client.query("SELECT pg_advisory_lock($1)", [LOCK_ID]);
     await createHistoryTable(client);
     const applied = await client.query<{ id: string; filename: string; checksum: string }>(
@@ -134,7 +136,7 @@ async function main(): Promise<void> {
   const pool = createPool(config.databaseUrl);
   try {
     await connectWithRetry(pool, config.migrationTimeoutMs);
-    await applyMigrations(pool);
+    await applyMigrations(pool, config.migrationTimeoutMs);
   } finally {
     await pool.end();
   }

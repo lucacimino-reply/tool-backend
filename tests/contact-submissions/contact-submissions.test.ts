@@ -115,6 +115,18 @@ describe("POST /contact-submissions", () => {
     await expect(database.query("SELECT id FROM contact_submissions")).resolves.toMatchObject({ rows: [] });
   });
 
+  it("rejects oversized JSON before validation or persistence", async () => {
+    const { app, database } = createTestApp();
+
+    await request(app)
+      .post("/contact-submissions")
+      .send({ email: "ada@example.com", extra: "x".repeat(16 * 1024), name: "Ada" })
+      .expect(422)
+      .expect({ errors: {} });
+
+    await expect(database.query("SELECT id FROM contact_submissions")).resolves.toMatchObject({ rows: [] });
+  });
+
   it("returns SubmissionError when the database write fails", async () => {
     const { app } = createTestApp(false);
 
