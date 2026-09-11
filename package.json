@@ -1,0 +1,31 @@
+{
+  "name": "tool-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "migrate": "node dist/db/migrate.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "dotenv": "16.6.1",
+    "express": "5.1.0",
+    "pg": "8.16.3",
+    "validator": "13.15.35"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "22.15.30",
+    "@types/pg": "8.15.4",
+    "@types/supertest": "6.0.3",
+    "@types/validator": "13.15.3",
+    "pg-mem": "3.0.5",
+    "supertest": "7.1.3",
+    "tsx": "4.19.4",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  }
+}
