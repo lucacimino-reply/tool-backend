@@ -9,11 +9,11 @@ services:
   backend:
     image: tool-backend:contact-submission-api
     environment:
-      DATABASE_URL: postgres://postgres:postgres@database:5432/tool_backend
+      DATABASE_URL: postgres://studio_demo_user:demo_only_studio_password@database:5432/studio_contact_demo
 
   database:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: tool_backend
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: studio_contact_demo
+      POSTGRES_USER: studio_demo_user
+      POSTGRES_PASSWORD: demo_only_studio_password
