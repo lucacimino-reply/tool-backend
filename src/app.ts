@@ -15,14 +15,23 @@ export function createApp(repository: SubmissionRepository) {
   });
   app.use(createContactsRouter(repository));
 
-  const malformedJsonHandler: ErrorRequestHandler = (error, _request, response, next) => {
+  const requestBodyErrorHandler: ErrorRequestHandler = (error, _request, response, next) => {
+    if (typeof error === "object" && error !== null && "type" in error && error.type === "entity.too.large") {
+      response.status(400).json({
+        errors: {
+          name: "Request body is too large.",
+          email: "Request body is too large.",
+        },
+      });
+      return;
+    }
     if (error instanceof SyntaxError && "body" in error) {
       response.status(400).json({ errors: { name: "Request body must be valid JSON." } });
       return;
     }
     next(error);
   };
-  app.use(malformedJsonHandler);
+  app.use(requestBodyErrorHandler);
   app.use((_request, response) => {
     const error: ServerError = { message: "Not found." };
     response.status(404).json(error);

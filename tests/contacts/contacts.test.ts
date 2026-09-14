@@ -83,6 +83,26 @@ test("POST /submissions rejects invalid JSON inputs with field-only errors", asy
   await pool.end();
 });
 
+test("POST /submissions rejects oversized JSON before persistence", async () => {
+  const pool = await createTestDatabase();
+  const app = createApp(createSubmissionRepository(pool));
+  const response = await request(app)
+    .post("/submissions")
+    .set("Content-Type", "application/json")
+    .send(JSON.stringify({ name: "Ada", email: "ada@example.com", ignored: "x".repeat(2_048) }));
+
+  assert.equal(response.status, 400);
+  assert.match(response.headers["content-type"] ?? "", /^application\/json/);
+  assert.deepEqual(response.body, {
+    errors: {
+      name: "Request body is too large.",
+      email: "Request body is too large.",
+    },
+  });
+  assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM submissions")).rows[0].count, 0);
+  await pool.end();
+});
+
 test("POST /submissions returns 500 when persistence fails", async () => {
   const repository: SubmissionRepository = { create: async () => Promise.reject(new Error("database down")) };
   const response = await request(createApp(repository))
