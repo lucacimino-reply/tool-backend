@@ -1,0 +1,26 @@
+services:
+  frontend:
+    image: tool-frontend:frontend-contact-submission-flow-review
+    environment:
+      BACKEND_UPSTREAM: http://backend:3000
+    ports:
+      - "127.0.0.1::8080"
+
+  backend:
+    image: studio-contact-backend:local
+    environment:
+      DATABASE_URL: postgres://studio:studio-local-only@database:5432/studio
+      MIGRATION_TIMEOUT_MS: "60000"
+      PORT: "3000"
+
+  database:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_DB: studio
+      POSTGRES_PASSWORD: studio-local-only
+      POSTGRES_USER: studio
+    volumes:
+      - contact-runtime-data:/var/lib/postgresql/data
+
+volumes:
+  contact-runtime-data:
