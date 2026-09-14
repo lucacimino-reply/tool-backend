@@ -1,0 +1,30 @@
+{
+  "name": "studio-contact-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && cp -R src/db/migrations dist/db/migrations",
+    "start": "node dist/server.js",
+    "migrate": "node dist/db/migrate.js",
+    "test": "tsx --test tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "16.6.1",
+    "express": "5.1.0",
+    "pg": "8.16.3",
+    "validator": "13.15.15"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "22.17.2",
+    "@types/pg": "8.15.5",
+    "@types/supertest": "6.0.3",
+    "@types/validator": "13.15.3",
+    "pg-mem": "3.0.5",
+    "supertest": "7.1.4",
+    "tsx": "4.20.4",
+    "typescript": "5.9.2"
+  }
+}
