@@ -4,11 +4,13 @@ import type { Pool, PoolClient } from 'pg';
 
 import { sql as createAuth } from './migrations/001-create-auth.js';
 import { sql as createPromotions } from './migrations/002-create-promotions.js';
+import { sql as createCompletedBookings } from './migrations/003-create-completed-bookings.js';
 
 const MIGRATION_LOCK_ID = 458_624_119;
 const migrations = [
   { version: 1, name: 'create-auth', sql: createAuth },
   { version: 2, name: 'create-promotions', sql: createPromotions },
+  { version: 3, name: 'create-completed-bookings', sql: createCompletedBookings },
 ];
 
 function checksum(sql: string): string {
