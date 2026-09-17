@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { validateQuoteRequest, type ValidationProblem } from '../quotes/quote.schema.js';
-import type { ArrivalSelection, QuoteRequest, ServiceSelection } from '../quotes/quote.types.js';
+import { validateBookingQuoteRequest, type ValidationProblem } from '../quotes/quote.feature.js';
+import type { ArrivalSelection, ServiceSelection } from '../quotes/quote.feature.js';
 import type { BookingContact, BookingDetails } from './booking.types.js';
 
 const ACCESS_METHODS = ['someone_is_home', 'doorman', 'hidden_key', 'others'] as const;
@@ -69,7 +69,7 @@ export function validateCreateBookingRequest(input: unknown, now: Date): CreateB
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) return addZodErrors(parsed.error);
   const { schedule, details, payment } = parsed.data;
-  const quote = validateQuoteRequest({ service: parsed.data.service, arrival: schedule.arrival, details: { frequency: details.frequency, extras: details.extras }, promoCode: parsed.data.promoCode });
+  const quote = validateBookingQuoteRequest({ service: parsed.data.service, arrival: schedule.arrival, details: { frequency: details.frequency, extras: details.extras }, promoCode: parsed.data.promoCode });
   if ('code' in quote) return quote;
 
   const errors: Record<string, string> = {};
@@ -96,7 +96,7 @@ export function validateCreateBookingRequest(input: unknown, now: Date): CreateB
 
   const cardDigits = payment.cardNumber.replace(/[ -]/g, '');
   if (!/^[0-9](?:[ -]?[0-9]){11,18}$/.test(payment.cardNumber) || !/^\d{12,19}$/.test(cardDigits)) errors['payment.cardNumber'] = 'Card number must contain 12 to 19 digits with only single spaces or hyphens between digits.';
-  const expiry = payment.expiry.trim();
+  const expiry = payment.expiry;
   const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/.exec(expiry);
   if (!expiryMatch) errors['payment.expiry'] = 'Expiry must use MM/YY or MM/YYYY.';
   else if (current) {

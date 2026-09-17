@@ -3,8 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Pool } from 'pg';
 
 import type { AuthenticatedCustomer } from '../auth/auth.types.js';
-import { ineligiblePromoProblem, type ValidationProblem } from '../quotes/quote.schema.js';
-import { calculateQuote } from '../quotes/quote.service.js';
+import { calculateBookingQuote, ineligiblePromoProblem, type ValidationProblem } from '../quotes/quote.feature.js';
 import { persistCompletedBooking } from './booking.repository.js';
 import type { CreateBookingInput } from './booking.schema.js';
 import type { PersistBookingResult } from './booking.types.js';
@@ -18,7 +17,7 @@ function fingerprint(input: CreateBookingInput): string {
 }
 
 export async function createCompletedBooking(pool: Pool, customer: AuthenticatedCustomer['customer'], idempotencyKey: string, input: CreateBookingInput): Promise<PersistBookingResult | ValidationProblem> {
-  const billing = await calculateQuote(pool, input.service, input.schedule.arrival, {
+  const billing = await calculateBookingQuote(pool, input.service, input.schedule.arrival, {
     frequency: input.details.frequency, extras: input.details.extras.map((extra) => extra.name),
   }, input.promoCode);
   if (input.promoCode && !billing.promoCode) return ineligiblePromoProblem();

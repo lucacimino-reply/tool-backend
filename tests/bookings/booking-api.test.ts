@@ -67,6 +67,7 @@ describe('POST /api/bookings', () => {
     ['schedule.date', '2029-12-30', 'schedule.date'],
     ['schedule.customerTimeZone', 'Not/AZone', 'schedule.customerTimeZone'],
     ['payment.expiry', '11/29', 'payment.expiry'],
+    ['payment.expiry', ' 12/30 ', 'payment.expiry'],
     ['payment.cardNumber', '4242x4242', 'payment.cardNumber'],
     ['details.address', '   ', 'details.address'],
     ['details.petDescription', undefined, 'details.petDescription'],
