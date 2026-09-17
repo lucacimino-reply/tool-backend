@@ -3,9 +3,13 @@ import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
 import { sql as createAuth } from './migrations/001-create-auth.js';
+import { sql as createPromotions } from './migrations/002-create-promotions.js';
 
 const MIGRATION_LOCK_ID = 458_624_119;
-const migrations = [{ version: 1, name: 'create-auth', sql: createAuth }];
+const migrations = [
+  { version: 1, name: 'create-auth', sql: createAuth },
+  { version: 2, name: 'create-promotions', sql: createPromotions },
+];
 
 function checksum(sql: string): string {
   return createHash('sha256').update(sql, 'utf8').digest('hex');
