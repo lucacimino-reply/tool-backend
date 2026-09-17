@@ -68,6 +68,20 @@ describe('authentication API', () => {
     await request(app).get('/api/auth/session').set('Cookie', 'clean_session=invalid').expect(401);
   });
 
+  it('rejects oversized JSON before creating a customer', async () => {
+    const response = await request(app)
+      .post('/api/auth/signup')
+      .send({ name: 'Ada', email: 'ada@example.com', password: 'password1', termsAccepted: true, padding: 'x'.repeat(16 * 1024) })
+      .expect(422);
+
+    expect(response.body).toEqual({
+      code: 'validation_error',
+      message: 'One or more fields are invalid.',
+      fieldErrors: { body: 'Request body must be at most 16kb.' },
+    });
+    await expect(pool.query('SELECT * FROM customers')).resolves.toMatchObject({ rows: [] });
+  });
+
   it('does not resolve expired or revoked sessions', async () => {
     const agent = request.agent(app);
     const signup = await agent.post('/api/auth/signup').send({ name: 'Ada', email: `ada-${randomUUID()}@example.com`, password: 'password1', termsAccepted: true }).expect(201);

@@ -10,6 +10,14 @@ export function createApp(pool: Pool, options: { sessionDurationHours: number; s
   app.use(cookieParser());
   app.use('/api', createAuthRouter(pool, options));
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
+    if (typeof error === 'object' && error !== null && 'type' in error && error.type === 'entity.too.large') {
+      response.status(422).json({
+        code: 'validation_error',
+        message: 'One or more fields are invalid.',
+        fieldErrors: { body: 'Request body must be at most 16kb.' },
+      });
+      return;
+    }
     if (error instanceof SyntaxError && 'body' in error) {
       response.status(422).json({ code: 'validation_error', message: 'One or more fields are invalid.', fieldErrors: { body: 'Request body must be valid JSON.' } });
       return;
