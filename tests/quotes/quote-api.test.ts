@@ -43,6 +43,20 @@ describe('POST /api/booking-quotes', () => {
     });
   });
 
+  it('rejects an oversized JSON body before quote evaluation', async () => {
+    const response = await request(app)
+      .post('/api/booking-quotes')
+      .set('Content-Type', 'application/json')
+      .send({ payload: 'x'.repeat(16 * 1024) })
+      .expect(422);
+
+    expect(response.body).toEqual({
+      code: 'validation_error',
+      message: 'One or more fields are invalid.',
+      fieldErrors: { body: 'Request body must be at most 16kb.' },
+    });
+  });
+
   it('returns the canonical billing snapshot for a flexible quote with CLEAN10', async () => {
     const agent = await authenticatedAgent();
     const response = await agent.post('/api/booking-quotes').send({

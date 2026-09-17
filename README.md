@@ -12,7 +12,7 @@ npm run build
 npm start
 ```
 
-`PORT` defaults to `3000`. `SESSION_DURATION_HOURS` controls server-side session validity; the `clean_session` cookie itself has no persistence attributes and therefore ends with the browser session.
+`PORT` defaults to `3000`. `DATABASE_URL` must be a `postgres://` or `postgresql://` connection string. `SESSION_DURATION_HOURS` controls server-side session validity; the `clean_session` cookie itself has no persistence attributes and therefore ends with the browser session. `MIGRATION_LOCK_TIMEOUT_MS` defaults to `30000` and bounds the wait for the startup migration lock.
 
 ## Tests
 
@@ -30,4 +30,4 @@ Build the independently runnable backend image without starting it:
 docker build -t tool-backend:latest .
 ```
 
-At runtime provide `DATABASE_URL`, optionally `PORT` (default `3000`), and `SESSION_DURATION_HOURS` (default `24`). The production command is `node dist/server.js`; migrations run before Express begins listening.
+At runtime provide `DATABASE_URL`, optionally `PORT` (default `3000`), `SESSION_DURATION_HOURS` (default `24`), and `MIGRATION_LOCK_TIMEOUT_MS` (default `30000`). The production command is `node --env-file-if-exists=.env dist/server.js`; migrations run before Express begins listening.

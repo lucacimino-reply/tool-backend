@@ -11,6 +11,7 @@ const environmentSchema = z.object({
     'must use the postgres:// or postgresql:// protocol',
   ),
   SESSION_DURATION_HOURS: z.coerce.number().int().min(1).max(24 * 31).default(24),
+  MIGRATION_LOCK_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
 });
 
 export type Config = z.infer<typeof environmentSchema>;

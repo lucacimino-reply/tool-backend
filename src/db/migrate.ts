@@ -15,9 +15,10 @@ function checksum(sql: string): string {
   return createHash('sha256').update(sql, 'utf8').digest('hex');
 }
 
-export async function migrate(pool: Pool): Promise<void> {
+export async function migrate(pool: Pool, lockTimeoutMs = 30_000): Promise<void> {
   const client = await pool.connect();
   try {
+    await client.query("SELECT set_config('lock_timeout', $1, false)", [`${lockTimeoutMs}ms`]);
     await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (

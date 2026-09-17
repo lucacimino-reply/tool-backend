@@ -15,4 +15,4 @@ COPY --from=build /app/dist ./dist
 COPY package.json ./package.json
 USER node
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+CMD ["node", "--env-file-if-exists=.env", "dist/server.js"]
