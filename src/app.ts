@@ -3,12 +3,14 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import type { Pool } from 'pg';
 
 import { createAuthRouter } from './features/auth/auth.routes.js';
+import { createQuoteRouter } from './features/quotes/quote.routes.js';
 
 export function createApp(pool: Pool, options: { sessionDurationHours: number; secureCookies: boolean }) {
   const app = express();
   app.use(express.json({ limit: '16kb', type: 'application/json' }));
   app.use(cookieParser());
   app.use('/api', createAuthRouter(pool, options));
+  app.use('/api', createQuoteRouter(pool));
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     if (typeof error === 'object' && error !== null && 'type' in error && error.type === 'entity.too.large') {
       response.status(422).json({

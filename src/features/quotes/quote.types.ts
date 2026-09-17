@@ -21,6 +21,13 @@ export type QuoteDetails = {
   extras: Extra[];
 };
 
+export type QuoteRequest = {
+  service: ServiceSelection;
+  arrival: ArrivalSelection;
+  details: QuoteDetails;
+  promoCode?: string;
+};
+
 export type Promotion = {
   code: string;
   amountCents: number;
