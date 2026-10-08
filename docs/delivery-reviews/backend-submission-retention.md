@@ -36,7 +36,7 @@ The tests use isolated in-memory/fake PostgreSQL persistence and a controllable 
 | `npm test` | Passed: all 15 HTTP and repository tests, including pre-deadline retention, deadline deletion, independent duplicate expiry, startup catch-up, and scheduled cleanup. |
 | `npm run build` | Passed: strict TypeScript production build. |
 | `docker build --pull=false --tag tool-backend:delete-accepted-submissions-after-365-days .` | Passed from the backend repository build context. No container was started; BuildKit reused cached dependency and compilation layers. |
-| `docker image inspect --format '{{.Id}} user={{.Config.User}} command={{json .Config.Cmd}}' tool-backend:delete-accepted-submissions-after-365-days` | Passed: image `sha256:4ee5bc2654c9fa60feb47f19faa73b1d01d411f8e6b59919021fab23bbacac23`, user `node`, command `node --env-file-if-exists=.env dist/server.js`. |
+| `docker image inspect --format '{{.Id}} user={{.Config.User}} command={{json .Config.Cmd}}' tool-backend:delete-accepted-submissions-after-365-days` | Passed: image `sha256:d8629bdd606f8653697cd443a41596c8cb88ff10ac43ef6600041c80cc0c41e9`, user `node`, command `node --env-file-if-exists=.env dist/server.js`. |
 | Root `build-manifest.json` | Confirmed image name `tool-backend` and tag `delete-accepted-submissions-after-365-days`, matching the built image. |
 | `git diff --check b14182d89f542d3851fef5fa33aa485a5ca092c8 54c7a50d54e0063d8b97c5f3f3c64bc5abb9ad0d` | Passed. |
 
