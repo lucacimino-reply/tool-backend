@@ -161,6 +161,22 @@ async function postSubmission(baseUrl: string, body: unknown): Promise<Response>
   });
 }
 
+async function postRawBody(baseUrl: string, body: string, contentType: string): Promise<Response> {
+  return fetch(`${baseUrl}/api/submissions`, {
+    method: "POST",
+    headers: { "content-type": contentType },
+    body,
+  });
+}
+
+function requestBodyWithByteLength(length: number): string {
+  const prefix = '{"name":"Alex","email":"alex@example.com","padding":"';
+  const suffix = '"}';
+  const paddingLength = length - Buffer.byteLength(prefix) - Buffer.byteLength(suffix);
+  assert.ok(paddingLength >= 0);
+  return `${prefix}${"x".repeat(paddingLength)}${suffix}`;
+}
+
 function json(response: Response): Promise<Record<string, unknown>> {
   return response.json() as Promise<Record<string, unknown>>;
 }
@@ -225,6 +241,61 @@ test("rejects invalid fields before calling storage", async () => {
       }
     }
     assert.equal(store.all().length, 0);
+  });
+});
+
+test("enforces the JSON byte limit before submission storage", async () => {
+  let storageCalls = 0;
+  const store: SubmissionStore = {
+    async createWithinCapacity(input) {
+      storageCalls += 1;
+      return { ...input, id: String(storageCalls), createdAt: new Date("2026-01-01T00:00:00.000Z") };
+    },
+  };
+
+  await withServer(store, async (baseUrl) => {
+    const atLimit = await postRawBody(baseUrl, requestBodyWithByteLength(16 * 1024), "application/json");
+    assert.equal(atLimit.status, 201);
+    assert.equal(storageCalls, 1);
+
+    const overLimit = await postRawBody(baseUrl, requestBodyWithByteLength(16 * 1024 + 1), "application/json");
+    assert.equal(overLimit.status, 413);
+    assert.deepEqual(await json(overLimit), { error: { code: "REQUEST_TOO_LARGE" } });
+    assert.equal(storageCalls, 1);
+  });
+});
+
+test("rejects non-JSON submissions before parsing or storage", async () => {
+  let storageCalls = 0;
+  const store: SubmissionStore = {
+    async createWithinCapacity(input) {
+      storageCalls += 1;
+      return { ...input, id: String(storageCalls), createdAt: new Date("2026-01-01T00:00:00.000Z") };
+    },
+  };
+
+  await withServer(store, async (baseUrl) => {
+    const response = await postRawBody(baseUrl, requestBodyWithByteLength(16 * 1024 + 1), "text/plain");
+    assert.equal(response.status, 415);
+    assert.deepEqual(await json(response), { error: { code: "UNSUPPORTED_MEDIA_TYPE" } });
+    assert.equal(storageCalls, 0);
+  });
+});
+
+test("rejects malformed JSON before submission storage", async () => {
+  let storageCalls = 0;
+  const store: SubmissionStore = {
+    async createWithinCapacity(input) {
+      storageCalls += 1;
+      return { ...input, id: String(storageCalls), createdAt: new Date("2026-01-01T00:00:00.000Z") };
+    },
+  };
+
+  await withServer(store, async (baseUrl) => {
+    const response = await postRawBody(baseUrl, '{"name":', "application/json");
+    assert.equal(response.status, 400);
+    assert.deepEqual(await json(response), { error: { code: "INVALID_JSON" } });
+    assert.equal(storageCalls, 0);
   });
 });
 
