@@ -38,7 +38,7 @@ The 365-day retention/deletion lifecycle is not implemented here: the Task expli
 - `npm test`: passed, 11/11 tests. This covers valid values and boundaries, invalid values before storage, duplicates, rolling-window capacity and recovery, concurrent capacity admission through an isolated PostgreSQL-protocol test double, failed persistence, JSON byte boundaries, unsupported media type, and malformed JSON. The suite uses isolated in-memory/fake storage; it does not claim to exercise a live PostgreSQL server.
 - `npm run build`: passed with the repository's strict TypeScript configuration.
 - `npm ls --depth=0`: passed; installed direct dependencies match the exact package manifest versions (`express` 5.1.0, `pg` 8.16.3, `zod` 4.1.11; TypeScript 5.9.3 and declared type packages).
-- `docker build --network=none --tag tool-backend:local .`: passed without starting a container. Built image ID: `sha256:d0b341b3179eaaf512c384c93916a72babbfbc6e84fb6e06f53bf1134a52dba1`.
+- `docker build --network=none --tag tool-backend:local .`: passed without starting a container. Final inspected image ID: `sha256:fa86a55c830f87d5e8bd40fb2678bbc11dc7da97c81b6a8a085e9086e0dc0325`.
 - `docker image inspect`: confirmed tag `tool-backend:local`, runtime user `node`, Node base version `22.21.0`, and direct compiled-server command `node --env-file-if-exists=.env dist/server.js`.
 - `git diff --check`: passed before committing the corrections.
 
