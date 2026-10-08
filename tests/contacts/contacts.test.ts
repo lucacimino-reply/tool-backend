@@ -97,6 +97,37 @@ test("reports missing, empty, and out-of-range fields without storing them", asy
   assert.equal(repository.rows.length, 0);
 });
 
+test("rejects field and request-size limits before calling persistence", async () => {
+  let persistenceCalls = 0;
+  const repository: SubmissionRepository = {
+    async createWithinCapacity(submission) {
+      persistenceCalls += 1;
+      return { ...submission, id: String(persistenceCalls), submittedAt: new Date() };
+    },
+  };
+  const app = createApp(repository, () => {});
+
+  const overlongName = await request(app)
+    .post("/api/submissions")
+    .send(validPair({ name: "n".repeat(101) }));
+  const overlongEmail = await request(app)
+    .post("/api/submissions")
+    .send(validPair({ email: `${"a".repeat(250)}@example.com` }));
+  const oversizedJson = `${JSON.stringify(validPair())}${" ".repeat(16 * 1024)}`;
+  const oversizedBody = await request(app)
+    .post("/api/submissions")
+    .set("Content-Type", "application/json")
+    .send(oversizedJson);
+
+  assert.equal(overlongName.status, 400);
+  assert.equal(overlongName.body.fields.name, "Name must be at most 100 characters.");
+  assert.equal(overlongEmail.status, 400);
+  assert.equal(overlongEmail.body.fields.email, "Email must be at most 254 characters.");
+  assert.equal(oversizedBody.status, 413);
+  assert.deepEqual(oversizedBody.body, { error: "request_too_large" });
+  assert.equal(persistenceCalls, 0);
+});
+
 test("accepts name lengths 1 and 100 and a valid 254-character email", async () => {
   const { app, repository } = makeApp();
 

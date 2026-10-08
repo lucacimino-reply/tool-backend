@@ -23,6 +23,9 @@ Install dependencies and start the compiled server with `npm ci`, `npm run build
 {"name":"Alex Example","email":"alex@example.com"}
 ```
 
+The request body is limited to 16 KiB. Larger bodies are rejected with `413 Payload Too Large` and
+`{"error":"request_too_large"}` before submission validation or persistence.
+
 The backend preserves both values exactly as supplied. Name length is 1-100 characters; email must be valid and no longer than 254 characters. Repeated values and identical pairs create separate records.
 
 Outcomes:
