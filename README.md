@@ -35,7 +35,11 @@ Outcomes:
 - `429 Too Many Requests`: `{"error":"capacity_unavailable"}`; a valid request is not stored when 100 successful submissions fall within the current rolling 60-minute interval.
 - `500 Internal Server Error`: `{"error":"submission_failed"}` for persistence and unexpected submission failures; success is never reported for a failed write.
 
-Both capacity and server failures are non-success outcomes and may use the frontend's generic failure behavior. No retrieval endpoint is provided. Retention/deletion is owned by the separate retention Delivery unit.
+Both capacity and server failures are non-success outcomes and may use the frontend's generic failure behavior. No retrieval endpoint is provided.
+
+## Submission retention
+
+Each accepted submission is stored as a distinct record with its own expiry deadline, exactly 365 elapsed days (365 x 24 hours) after acceptance. The service deletes records at or after their individual deadline. Existing records receive deadlines based on their persisted `submitted_at` timestamp when the expiry migration runs. Cleanup runs once during startup before the API accepts traffic, then every 60 seconds during normal operation; overdue records are therefore caught up after a restart without a visitor request. No additional lifecycle configuration is required. Expiry does not change an already displayed confirmation and has no visitor-facing retrieval or notification flow.
 
 ## Tests and image build
 
@@ -44,7 +48,7 @@ Run `npm test` for repository-native HTTP and service tests. They use isolated i
 Build the independently buildable runtime image without starting a container:
 
 ```sh
-docker build --tag tool-backend:implement-contact-submission-capacity .
+docker build --tag tool-backend:delete-accepted-submissions-after-365-days .
 ```
 
 The Dockerfile pins Node to `22.22.1-alpine3.23`, installs the committed lockfile with `npm ci`, compiles TypeScript in a build stage, and runs the compiled server as the non-root `node` user. The container listens on port `3000`; inject `DATABASE_URL`, and optionally `PORT`, `MIGRATION_TIMEOUT_MS`, and `NODE_ENV`, when running it.

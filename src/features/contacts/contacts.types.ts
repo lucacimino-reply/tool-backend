@@ -6,6 +6,7 @@ export type NewSubmission = {
 export type StoredSubmission = NewSubmission & {
   id: string;
   submittedAt: Date;
+  expiresAt: Date;
 };
 
 export type ValidationFields = Partial<Record<keyof NewSubmission, string>>;
@@ -17,4 +18,5 @@ export type SubmissionResult =
 
 export interface SubmissionRepository {
   createWithinCapacity(submission: NewSubmission): Promise<StoredSubmission | null>;
+  deleteExpired(): Promise<number>;
 }

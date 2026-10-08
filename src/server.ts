@@ -2,12 +2,15 @@ import { createApp } from "./app.js";
 import { config } from "./config/config.js";
 import { migrate } from "./db/migrate.js";
 import { pool } from "./db/pool.js";
+import { startSubmissionExpiryCleanup } from "./features/contacts/contacts.expiry.js";
 import { createSubmissionRepository } from "./features/contacts/contacts.repository.js";
 
 async function start(): Promise<void> {
   try {
     await migrate(pool, config.migrationTimeoutMs);
-    const app = createApp(createSubmissionRepository(pool));
+    const repository = createSubmissionRepository(pool);
+    await startSubmissionExpiryCleanup(repository);
+    const app = createApp(repository);
     app.listen(config.port, () => {
       console.info(`Contact submission API listening on port ${config.port}`);
     });

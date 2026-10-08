@@ -1,6 +1,6 @@
 {
   "image": {
     "name": "tool-backend",
-    "tag": "implement-contact-submission-capacity"
+    "tag": "delete-accepted-submissions-after-365-days"
   }
 }

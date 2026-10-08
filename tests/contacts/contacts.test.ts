@@ -11,6 +11,7 @@ import type {
 } from "../../src/features/contacts/contacts.types.js";
 
 const WINDOW_MS = 60 * 60 * 1000;
+const RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 
 class InMemorySubmissionRepository implements SubmissionRepository {
   readonly rows: StoredSubmission[] = [];
@@ -41,12 +42,20 @@ class InMemorySubmissionRepository implements SubmissionRepository {
         name: submission.name,
         email: submission.email,
         submittedAt: new Date(this.now),
+        expiresAt: new Date(this.now.getTime() + RETENTION_MS),
       };
       this.rows.push(row);
       return row;
     } finally {
       release();
     }
+  }
+
+  async deleteExpired(): Promise<number> {
+    const retained = this.rows.filter((row) => row.expiresAt.getTime() > this.now.getTime());
+    const deleted = this.rows.length - retained.length;
+    this.rows.splice(0, this.rows.length, ...retained);
+    return deleted;
   }
 }
 
@@ -102,7 +111,16 @@ test("rejects field and request-size limits before calling persistence", async (
   const repository: SubmissionRepository = {
     async createWithinCapacity(submission) {
       persistenceCalls += 1;
-      return { ...submission, id: String(persistenceCalls), submittedAt: new Date() };
+      const submittedAt = new Date();
+      return {
+        ...submission,
+        id: String(persistenceCalls),
+        submittedAt,
+        expiresAt: new Date(submittedAt.getTime() + RETENTION_MS),
+      };
+    },
+    async deleteExpired() {
+      return 0;
     },
   };
   const app = createApp(repository, () => {});

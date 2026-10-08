@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
+import { EXPIRY_CLEANUP_INTERVAL_MS, startSubmissionExpiryCleanup } from "../../src/features/contacts/contacts.expiry.js";
 import { createSubmissionRepository } from "../../src/features/contacts/contacts.repository.js";
 import type { NewSubmission, StoredSubmission } from "../../src/features/contacts/contacts.types.js";
 
 const WINDOW_MS = 60 * 60 * 1000;
+const RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 
 class FakePostgres {
   readonly rows: StoredSubmission[] = [];
@@ -25,22 +27,33 @@ class FakePostgres {
   }
 
   nextSubmission(values: unknown[]): StoredSubmission {
-    const [name, email, submittedAt] = values as [string, string, Date];
+    const [name, email, submittedAt, expiresAt] = values as [string, string, Date, Date];
     return {
       id: String(this.nextId++),
       name,
       email,
       submittedAt: new Date(submittedAt),
+      expiresAt: new Date(expiresAt),
     };
   }
 }
 
-function queryResult<Row extends QueryResultRow>(rows: Row[]): QueryResult<Row> {
-  return { rows, rowCount: rows.length, command: "", oid: 0, fields: [] };
+function queryResult<Row extends QueryResultRow>(rows: Row[], rowCount = rows.length): QueryResult<Row> {
+  return { rows, rowCount, command: "", oid: 0, fields: [] };
 }
 
 class FakePool {
   constructor(private readonly database: FakePostgres) {}
+
+  async query<Row extends QueryResultRow>(sql: string): Promise<QueryResult<Row>> {
+    if (sql.startsWith("DELETE FROM contact_submissions")) {
+      const retained = this.database.rows.filter((row) => row.expiresAt.getTime() > this.database.now.getTime());
+      const deleted = this.database.rows.length - retained.length;
+      this.database.rows.splice(0, this.database.rows.length, ...retained);
+      return queryResult<Row>([], deleted);
+    }
+    throw new Error(`Unexpected pool SQL in repository test: ${sql}`);
+  }
 
   async connect(): Promise<PoolClient> {
     let unlock: (() => void) | undefined;
@@ -71,7 +84,15 @@ class FakePool {
           throw new Error("simulated database write failure");
         }
         pending = this.database.nextSubmission(values);
-        return queryResult<Row>([pending as unknown as Row]);
+        return queryResult<Row>([
+          {
+            id: pending.id,
+            name: pending.name,
+            email: pending.email,
+            submitted_at: pending.submittedAt,
+            expires_at: pending.expiresAt,
+          } as unknown as Row,
+        ]);
       }
       if (sql === "COMMIT") {
         if (pending) this.database.rows.push(pending);
@@ -98,7 +119,7 @@ class FakePool {
 
 function makeRepository(database = new FakePostgres()) {
   const pool = new FakePool(database) as unknown as Pool;
-  return { database, repository: createSubmissionRepository(pool) };
+  return { database, pool, repository: createSubmissionRepository(pool) };
 }
 
 const submission: NewSubmission = { name: "Alex Example", email: "alex@example.com" };
@@ -136,4 +157,60 @@ test("PostgreSQL repository inserts duplicate submissions as distinct rows", asy
 
   assert.notEqual(first?.id, second?.id);
   assert.equal(database.rows.length, 2);
+});
+
+test("submissions remain through their deadline and duplicates expire independently", async () => {
+  const { database, repository } = makeRepository();
+  const first = await repository.createWithinCapacity(submission);
+  assert.ok(first);
+
+  database.now = new Date(database.now.getTime() + 12 * 60 * 60 * 1000);
+  const second = await repository.createWithinCapacity(submission);
+  assert.ok(second);
+  assert.equal(database.rows.length, 2);
+  assert.equal(second.expiresAt.getTime() - second.submittedAt.getTime(), RETENTION_MS);
+
+  database.now = new Date(first.expiresAt.getTime() - 1);
+  assert.equal(await repository.deleteExpired(), 0);
+  assert.equal(database.rows.length, 2);
+
+  database.now = first.expiresAt;
+  assert.equal(await repository.deleteExpired(), 1);
+  assert.deepEqual(database.rows.map((row) => row.id), [second.id]);
+
+  database.now = second.expiresAt;
+  assert.equal(await repository.deleteExpired(), 1);
+  assert.equal(database.rows.length, 0);
+});
+
+test("startup catches up overdue records and scheduled cleanup removes later expiries", async () => {
+  const { database, pool, repository } = makeRepository();
+  const overdue = await repository.createWithinCapacity(submission);
+  assert.ok(overdue);
+  database.now = new Date(database.now.getTime() + RETENTION_MS - 60 * 1000);
+  const unexpired = await repository.createWithinCapacity(submission);
+  assert.ok(unexpired);
+
+  database.now = overdue.expiresAt;
+  const restartedRepository = createSubmissionRepository(pool);
+  let scheduledCleanup: (() => Promise<void>) | undefined;
+  let intervalMs = 0;
+  let cancelled = false;
+  const stop = await startSubmissionExpiryCleanup(restartedRepository, (callback, interval) => {
+    scheduledCleanup = callback;
+    intervalMs = interval;
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  assert.deepEqual(database.rows.map((row) => row.id), [unexpired.id]);
+  assert.equal(intervalMs, EXPIRY_CLEANUP_INTERVAL_MS);
+  assert.equal(typeof scheduledCleanup, "function");
+
+  database.now = unexpired.expiresAt;
+  await scheduledCleanup!();
+  assert.equal(database.rows.length, 0);
+  stop();
+  assert.equal(cancelled, true);
 });

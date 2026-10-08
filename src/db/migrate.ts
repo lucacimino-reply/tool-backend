@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 
 import { createSubmissionsSql } from "./migrations/001-create-submissions.js";
+import { addSubmissionExpirySql } from "./migrations/002-add-submission-expiry.js";
 
 const MIGRATION_LOCK_ID = "731459827105";
 
@@ -10,6 +11,11 @@ const migrations = [
     version: 1,
     name: "create-submissions",
     sql: createSubmissionsSql,
+  },
+  {
+    version: 2,
+    name: "add-submission-expiry",
+    sql: addSubmissionExpirySql,
   },
 ] as const;
 
